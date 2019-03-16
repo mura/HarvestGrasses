@@ -6,12 +6,12 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.world.BlockEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.Mod.EventHandler;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.registry.ForgeRegistries;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.registries.ForgeRegistries;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.lang.reflect.InvocationTargetException;
@@ -19,19 +19,19 @@ import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Mod(modid = HarvestGrassesMod.MODID, name = HarvestGrassesMod.NAME, version = HarvestGrassesMod.VERSION)
+// The value here should match an entry in the META-INF/mods.toml file
+@Mod(HarvestGrassesMod.MODID)
 public class HarvestGrassesMod {
     static final String MODID = "harvestgrassesmod";
-    static final String NAME = "Harvest Grasses Mod";
-    static final String VERSION = "0.2";
+    // Directly reference a log4j logger.
+    private static final Logger LOGGER = LogManager.getLogger();
 
-    private static Logger logger;
     private final static List<String> noDropBlockNames = Arrays.asList(
-            "air", "flowing_water", "water", "flowing_lava", "lava", "fire", "barrier"
+            "air", "water", "lava", "fire", "barrier"
     );
 
     private final static List<String> grassNames = Arrays.asList(
-            "tallgrass", "double_plant"
+            "grass", "tall_grass"
     );
 
     private Method getBlock;
@@ -47,15 +47,12 @@ public class HarvestGrassesMod {
             getBlock = method;
             break;
         }
+
+        // Register the doClientStuff method for modloading
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::doClientStuff);
     }
 
-    @EventHandler
-    public void preInit(FMLPreInitializationEvent event) {
-        logger = event.getModLog();
-    }
-
-    @EventHandler
-    public void init(FMLInitializationEvent event) {
+    private void doClientStuff(final FMLClientSetupEvent event) {
         loadBlockList();
         if (!blockList.isEmpty() && getBlock != null) {
             grassSet = grassNames.stream()
@@ -63,8 +60,10 @@ public class HarvestGrassesMod {
                     .filter(ForgeRegistries.BLOCKS::containsKey)
                     .map(ForgeRegistries.BLOCKS::getValue)
                     .collect(Collectors.toSet());
+
+            // Register ourselves for server and other game events we are interested in
             MinecraftForge.EVENT_BUS.register(this);
-            logger.info("It's Harvest Time!");
+            LOGGER.info("It's Harvest Time!");
         }
     }
 
@@ -74,23 +73,27 @@ public class HarvestGrassesMod {
                 .filter(ForgeRegistries.BLOCKS::containsKey)
                 .map(ForgeRegistries.BLOCKS::getValue)
                 .collect(Collectors.toSet());
-        blockList = ForgeRegistries.BLOCKS.getValuesCollection().stream()
+        blockList = ForgeRegistries.BLOCKS.getValues().stream()
                 .filter(block -> !noDropBlocks.contains(block))
                 .collect(Collectors.toList());
     }
 
+    // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
     public void onHarvestDrops(BlockEvent.HarvestDropsEvent event) {
+        LOGGER.info("onHarvestDrops: " + event);
         final Block brokenItem;
         try {
             brokenItem = (Block) getBlock.invoke(event.getState());
         } catch (IllegalAccessException | InvocationTargetException e) {
-            logger.info(e);
+            LOGGER.info(e);
             return;
         }
+        LOGGER.info("onHarvestDrops: " + brokenItem);
         if (!grassSet.contains(brokenItem)) {
             return;
         }
+        LOGGER.info("onHarvestDrops: " + event.getDrops());
         if (event.getDrops().isEmpty()) {
             return;
         }
