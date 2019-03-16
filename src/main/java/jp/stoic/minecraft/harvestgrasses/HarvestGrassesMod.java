@@ -21,20 +21,23 @@ import java.util.stream.Collectors;
 
 @Mod(modid = HarvestGrassesMod.MODID, name = HarvestGrassesMod.NAME, version = HarvestGrassesMod.VERSION)
 public class HarvestGrassesMod {
-    public static final String MODID = "harvestgrassesmod";
-    public static final String NAME = "Harvest Grasses Mod";
-    public static final String VERSION = "0.1";
+    static final String MODID = "harvestgrassesmod";
+    static final String NAME = "Harvest Grasses Mod";
+    static final String VERSION = "0.2";
 
     private static Logger logger;
     private final static List<String> noDropBlockNames = Arrays.asList(
             "air", "flowing_water", "water", "flowing_lava", "lava", "fire", "barrier"
     );
 
-    private Block grass;
-    private Block tallGrass;
+    private final static List<String> grassNames = Arrays.asList(
+            "tallgrass", "double_plant"
+    );
+
     private Method getBlock;
 
     private List<Block> blockList = Collections.emptyList();
+    private Set<Block> grassSet = Collections.emptySet();
 
     public HarvestGrassesMod() {
         for (Method method : IBlockState.class.getMethods()) {
@@ -55,9 +58,11 @@ public class HarvestGrassesMod {
     public void init(FMLInitializationEvent event) {
         loadBlockList();
         if (!blockList.isEmpty() && getBlock != null) {
-            grass = ForgeRegistries.BLOCKS.getValue(new ResourceLocation("grass"));
-            tallGrass = ForgeRegistries.BLOCKS.getValue(new ResourceLocation("tallgrass"));
-
+            grassSet = grassNames.stream()
+                    .map(ResourceLocation::new)
+                    .filter(ForgeRegistries.BLOCKS::containsKey)
+                    .map(ForgeRegistries.BLOCKS::getValue)
+                    .collect(Collectors.toSet());
             MinecraftForge.EVENT_BUS.register(this);
             logger.info("It's Harvest Time!");
         }
@@ -75,7 +80,7 @@ public class HarvestGrassesMod {
     }
 
     @SubscribeEvent
-    public void harvestItem(BlockEvent.HarvestDropsEvent event) {
+    public void onHarvestDrops(BlockEvent.HarvestDropsEvent event) {
         final Block brokenItem;
         try {
             brokenItem = (Block) getBlock.invoke(event.getState());
@@ -83,7 +88,7 @@ public class HarvestGrassesMod {
             logger.info(e);
             return;
         }
-        if (!grass.equals(brokenItem) && !tallGrass.equals(brokenItem)) {
+        if (!grassSet.contains(brokenItem)) {
             return;
         }
         if (event.getDrops().isEmpty()) {
