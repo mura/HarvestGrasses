@@ -27,7 +27,7 @@ public class HarvestGrassesMod {
 
     private static Logger logger;
     private final static List<String> noDropBlockNames = Arrays.asList(
-            "air", "flowing_water", "water", "flowing_lava", "lava", "fire", "barrier"
+            "air", "flowing_water", "water", "flowing_lava", "lava", "fire", "barrier", "WhiteShulkerBox", "OrangeShulkerBox", "MagentaShulkerBox", "LightBlueShulkerBox", "YellowShulkerBix", "LimeShulkerBox", "PinkShulkerBox", "GreyShulkerBox", "LightGreyShulkerBox", "CyanShulkerBox", "PurpleShulkerBox", "BlueShulkerBox", "BrownShulkerBox", "GreenShulkerBox", "RedShulkerBox", "BlackShulkerBox"
     );
 
     private final static List<String> grassNames = Arrays.asList(
